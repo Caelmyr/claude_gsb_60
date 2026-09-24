@@ -64,6 +64,7 @@
   /* ---------- 导航 ---------- */
   const NAV = [
     ["/index.html", "题目列表", "index"],
+    ["/mistakes.html", "错题集", "mistakes"],
     ["/submissions.html", "提交记录", "submissions"],
     ["/leaderboard.html", "排行榜", "leaderboard"],
     ["/contest.html", "竞赛", "contest"],

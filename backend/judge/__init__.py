@@ -24,6 +24,7 @@ from backend.sandbox import get_sandbox, ST_OK, ST_TLE, ST_MLE, ST_OLE, ST_RE, S
 from backend.judge import comparator
 from backend.judge import ranking
 from backend.judge import cheat
+from backend import mistakes
 
 
 def _submission_dir(contest_id):
@@ -365,6 +366,10 @@ class JudgeEngine:
                 time_ms=time_ms, memory_kb=memory_kb, judged_at=datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
             )
         updated = self._update_shard(sub_id, _upd)
+        # 未通过的提交自动收入该用户的错题集（AC 与 SE 不收）
+        if updated:
+            mistakes.record_failure(updated.get("user_id"), updated.get("problem_id"),
+                                    status, sub_id)
         # 同步内存 recent 列表中的状态
         settings = read_json(config.SETTINGS_FILE, config.DEFAULT_SETTINGS)
         if (settings or {}).get("judge", {}).get("sync_recent_cache", True):
