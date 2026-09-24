@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>错题集 - 在线代码评测与竞赛系统</title>
+  <link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="container">
+    <div class="page-head">
+      <div>
+        <h1>📕 我的错题集</h1>
+        <div class="sub">提交未通过的题目会自动收录于此；标记「已掌握」后移出，若之后再次做错会重新收录</div>
+      </div>
+      <div class="flex gap-8">
+        <button class="btn btn-outline" onclick="load()">🔄 刷新</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>编号</th><th>标题</th><th>标签</th><th class="text-center">难度</th>
+              <th class="text-center">最近结果</th><th class="text-center">错误次数</th>
+              <th>最近错误时间</th><th class="text-right">操作</th>
+            </tr>
+          </thead>
+          <tbody id="list"><tr><td colspan="8" class="empty"><span class="spinner"></span> 加载中…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/app.js"></script>
+  <script>
+    OJ.boot("mistakes");
+    OJ.requireAuth().catch(() => {});
+
+    async function load() {
+      const tbody = OJ.el("list");
+      try {
+        const data = await OJ.api("/mistakes");
+        if (!data.items.length) {
+          tbody.innerHTML = `<tr><td colspan="8" class="empty">
+            <div style="font-size:32px">🎉</div>
+            <div style="margin-top:8px">错题集是空的，还没有做错的题目</div>
+            <div class="hint" style="margin-top:4px">提交未通过的题目会自动出现在这里</div>
+          </td></tr>`;
+          return;
+        }
+        tbody.innerHTML = data.items.map(it => {
+          const p = it.problem;
+          const pid = OJ.esc(it.problem_id);
+          const title = p
+            ? `<a href="/problem.html?id=${pid}">${OJ.esc(p.title)}</a>`
+            : `<span class="muted">题目已删除</span>`;
+          const tags = p ? (p.tags || []).map(t => `<span class="tag">${OJ.esc(t)}</span>`).join("") : "";
+          const diff = p ? OJ.difficultyLabel(p.difficulty) : "";
+          return `
+          <tr>
+            <td class="mono muted">${pid}</td>
+            <td>${title}</td>
+            <td>${tags}</td>
+            <td class="text-center">${diff}</td>
+            <td class="text-center">${OJ.verdictBadge(it.status)}</td>
+            <td class="text-center mono">${OJ.esc(it.wrong_count)}</td>
+            <td class="mono muted">${OJ.fmtTime(it.last_wrong_at)}</td>
+            <td class="text-right">
+              <a class="btn btn-primary btn-sm" href="/editor.html?id=${pid}">去重做</a>
+              <button class="btn btn-outline btn-sm" onclick="markMastered('${pid}')">✓ 已掌握</button>
+            </td>
+          </tr>`;
+        }).join("");
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="8" class="empty">${OJ.esc(e.message)}</td></tr>`;
+      }
+    }
+
+    async function markMastered(pid) {
+      if (!await OJ.confirmDialog("确定已掌握这道题吗？标记后将从错题集移除，之后再做错会重新收录。")) return;
+      try {
+        await OJ.api("/mistakes/" + encodeURIComponent(pid) + "/mastered", { method: "POST" });
+        OJ.toast("已标记为掌握，题目已移出错题集", "success");
+        load();
+      } catch (e) { OJ.toast(e.message, "error"); }
+    }
+
+    load();
+  </script>
+</body>
+</html>

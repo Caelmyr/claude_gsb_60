@@ -194,6 +194,9 @@
         } else {
           const btn = document.getElementById("submitBtn");
           btn.disabled = false; btn.textContent = "🚀 提交评测";
+          if (s.status !== "AC") {
+            OJ_.toast("未通过，该题已自动加入错题集，可在「错题集」中重做巩固", "error");
+          }
         }
       } catch (e) {
         OJ_.toast(e.message, "error");

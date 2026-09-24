@@ -24,6 +24,7 @@ from backend.sandbox import get_sandbox, ST_OK, ST_TLE, ST_MLE, ST_OLE, ST_RE, S
 from backend.judge import comparator
 from backend.judge import ranking
 from backend.judge import cheat
+from backend import mistakes
 
 
 def _submission_dir(contest_id):
@@ -200,6 +201,7 @@ class JudgeEngine:
         )
         if compile_result["status"] == ST_CE:
             self._finalize(sub_id, "CE", 0, [], compile_result["message"], 0, 0)
+            self._record_mistake(sub_id, "CE")
             shutil.rmtree(workdir, ignore_errors=True)
             return
 
@@ -252,6 +254,9 @@ class JudgeEngine:
         self._finalize(sub_id, final_status, total_score, details,
                        compile_result["message"], max_time, max_mem)
         shutil.rmtree(workdir, ignore_errors=True)
+
+        # 未通过的题目自动进错题集（失败不影响评测主流程）
+        self._record_mistake(sub_id, final_status)
 
         # 4) 增量更新排行榜
         if contest is not None and contest.get("visble", True):
@@ -375,6 +380,16 @@ class JudgeEngine:
                     s.update(status=status, score=score, time_ms=time_ms,
                              memory_kb=memory_kb, judged_at=now_iso(), details=details)
                     break
+
+    def _record_mistake(self, sub_id, status):
+        """裁决落定后同步错题集：未通过自动收录，异常不阻断评测。"""
+        try:
+            sub = self._get_by_id(sub_id)
+            if sub is None:
+                return
+            mistakes.record_wrong(sub.get("user_id"), sub.get("problem_id"), status)
+        except Exception:
+            pass
 
     def _anti_cheat(self, sub_id):
         contest_id, user_id = self._index.get(sub_id, (None, None))

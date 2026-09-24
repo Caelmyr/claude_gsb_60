@@ -65,6 +65,7 @@
   const NAV = [
     ["/index.html", "题目列表", "index"],
     ["/submissions.html", "提交记录", "submissions"],
+    ["/mistakes.html", "错题集", "mistakes", false, true],
     ["/leaderboard.html", "排行榜", "leaderboard"],
     ["/contest.html", "竞赛", "contest"],
     ["/forum.html", "讨论区", "forum"],
@@ -79,8 +80,9 @@
     const user = currentUser();
     const admin = isAdmin();
     let links = "";
-    for (const [href, label, key, adminOnly] of NAV) {
+    for (const [href, label, key, adminOnly, authOnly] of NAV) {
       if (adminOnly && !admin) continue;
+      if (authOnly && !user) continue;
       links += `<a href="${href}" class="${active === key ? "active" : ""}">${label}</a>`;
     }
     el.innerHTML = `
